@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!-- Developed from http://visjs.org/examples/network/data/importingFromGephi.html-->
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF8">
+<title>Dynamic Data - Importing from Gephi (JSON)</title>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+<link type="text/css" rel="stylehseet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+
+<style type="text/css">
+
+body {
+	padding: 0;
+	margin: 0;
+	font-family: sans-serif;
+}
+#mynetwork {
+	padding: 10px;
+	margin: 10px;
+	margin-left: 20px;
+	border: 3px solid lightgrey;
+	border-radius: 5px;
+	width: 70vw;
+	height: 80vh;
+	float: left;
+}
+
+div.nodeContent {
+	float: right;
+	display: inline-block;
+	border: 3px solid lightgray;
+	border-radius: 5px;
+	height: 80vh;
+	width: 22vw;
+	margin: 10px;
+	margin-right: 20px;
+	padding: 10px;
+}
+
+h2 {
+	margin-left: 35px;
+	margin-bottom: 0px;
+	margin-top: 10px;
+	color: #222;
+}
+
+</style>
+
+</head>
+
+<body>
+<h2> Network of Images from BL-Flickr </h2>
+<div id="mynetwork"></div>
+<div class="nodeContent"><h4>Node Content:</h4>
+	<pre id="nodeContent"></pre>
+</div>
+<p style="margin-left: 35px; width: 65vw">
+Loaded the flickr.gexf (that included cluster attribute) into Gephi, then picked a layout (openORD), then exported using <a href="https://gephi.org/plugins/#/plugin/jsonexporter-plugin">json exporter plugin</a> as JSON graph file. 
+Download the plugin through Gephi application.
+This was done so that the x and y positions found by Gephi could be exported.
+Run this on localhost becuase it uses AJAX to parse the json file. 
+Download the archive <a href="Visualization.zip">Visualization.zip</a> </p>
+
+<script type="text/javascript">
+var network;
+
+var nodes = new vis.DataSet();
+var edges = new vis.DataSet();
+var gephiImported;
+
+var nodeContent = document.getElementById('nodeContent');
+
+loadJSON('flickr.json', redrawAll, function(err) {console.log('error')});
+
+var container = document.getElementById('mynetwork');
+var data = {
+nodes: nodes,
+			 edges: edges
+};
+var options = {
+nodes: 
+	{shape: 'dot', font: {face: 'Tahoma'}},
+edges: 
+	{width: 0.15, smooth: {type: 'continuous'}},
+interaction: 
+	{tooltipDelay: 200, hideEdgesOnDrag: false},
+physics: 
+	{stabilization: false, barnesHut: { gravitationalConstant: -10000, springConstant: 0.002, springLength: 150}}
+};// ooptions
+
+network = new vis.Network(container, data, options);
+network.on('click', function (params) {
+		if (params.nodes.length > 0) {
+			nodeContent.innerHTML = "";
+			var data = nodes.get(params.nodes[0]); // get the data from selected node
+			var nodeid = nodes.get(params.nodes[0])['id'];
+			var image = document.createElement("img");
+			var desc = document.createElement("p");
+			image.src = "./thumbnails/flickr/" + nodeid;
+			desc.innerHTML = JSON.stringify(data, undefined, 3); // put json data in pargraph div
+			nodeContent.appendChild(desc);
+			nodeContent.appendChild(image);
+	}
+})//on node click
+
+/**
+ * This function fills the DataSets. These DataSets will update the network.
+ */
+function redrawAll(gephiJSON) {
+	if (gephiJSON.nodes === undefined) {
+		gephiJSON = gephiImported;
+	}
+	else {
+		gephiImported = gephiJSON;
+	}
+
+	nodes.clear();
+	edges.clear();
+
+	var fixed = true;
+	var parseColor = true;
+
+	var parsed = vis.network.gephiParser.parseGephi(gephiJSON, {
+fixed: fixed,
+parseColor: parseColor
+});
+
+// add the parsed data to the DataSets.
+nodes.add(parsed.nodes);
+edges.add(parsed.edges);
+
+var data = nodes.get(2); // get the data from node 2 as example
+nodeContent.innerHTML = JSON.stringify(data,undefined,3); // show the data in the div
+network.fit(); // zoom to fit
+}
+
+function loadJSON(path, success, error) {
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4) {
+			if (xhr.status === 200) {
+				success(JSON.parse(xhr.responseText));
+			}
+			else {
+				error(xhr);
+			}
+		}
+	}
+	xhr.open('GET', path, true);
+	xhr.send();
+}
+</script>
+
+
+</body>
+</html>
+
